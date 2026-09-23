@@ -1,0 +1,78 @@
+AI_Sales_Agent 项目文件路径记录
+
+根目录: D:_Sales_Agent
+
+目录:
+
+app/ ├── agent/ │ ├── executor.py │ ├── planner.py │ ├── reviewer.py │
+├── memory.py │ └── state.py │ ├── graph/ │ └── workflow.py │ ├── tools/
+│ ├── company_tools.py │ ├── crm_tools.py │ └── database_tools.py │ ├──
+database/ │ ├── db.py │ └── models.py │ ├── llm/ │ └── model.py │ └──
+models/ ├── schemas.py └── review_schema.py
+
+重要import路径:
+
+1.  LangGraph工作流
+
+正确: from app.graph.workflow import create_graph
+
+错误: from app.agent.workflow import create_graph
+
+原因: workflow.py位于app/graph目录。
+
+2.  Agent节点
+
+from app.agent.executor import executor_node
+
+from app.agent.planner import planning_node
+
+from app.agent.reviewer import review_node
+
+from app.agent.memory import memory_node
+
+from app.agent.state import SalesAgentState
+
+3.  Tools
+
+from app.tools.company_tools import ( search_companies,
+search_company_news, search_company_jobs )
+
+from app.tools.crm_tools import query_leads
+
+4.  Database
+
+from app.database.db import SessionLocal
+
+from app.database.models import Lead
+
+5.  LLM
+
+from app.llm.model import get_reasoning_llm
+
+测试文件:
+
+项目根目录:
+
+test_graph.py test_memory_agent.py test_executor.py test_crm_tool.py
+test_database.py test_tools.py test_planner.py test_llm.py
+
+Agent流程:
+
+用户请求 ↓ app.graph.workflow.py ↓ planner ↓ executor ↓ tools ↓ reviewer
+↓ memory ↓ database
+
+文件查找规则:
+
+看到:
+
+from app.xxx.xxx import xxx
+
+先查看:
+
+D:_Sales_Agent
+
+不要默认所有文件都在app.agent。
+
+当前workflow真实位置:
+
+app/graph/workflow.py
