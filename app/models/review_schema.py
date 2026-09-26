@@ -18,4 +18,7 @@ class LeadAssessment(BaseModel):
     evidence: list[str]
 
 
+    solution_match:list
+
+
     recommended_action: str

@@ -1,11 +1,10 @@
-from typing import TypedDict, Annotated, List, Any
+from typing import TypedDict, Annotated
 
 from langchain_core.messages import BaseMessage
 
-
 from app.models.schemas import (
     SalesGoal,
-    ResearchPlan
+    ResearchPlan,
 )
 
 from langgraph.graph.message import add_messages
@@ -19,10 +18,14 @@ class SalesAgentState(TypedDict):
     # Planning输出
     research_plan: ResearchPlan | None
 
-    # 对话消息历史（修改这里：使用 Annotated + add_messages 实现消息自动追加，避免被新消息覆盖）
+    # 对话消息历史
+    #
+    # 使用 Annotated + add_messages
+    # 实现LangGraph消息自动追加，
+    # 避免新消息覆盖历史消息。
     messages: Annotated[
         list[BaseMessage],
-        add_messages
+        add_messages,
     ]
 
     # 候选客户
@@ -40,5 +43,30 @@ class SalesAgentState(TypedDict):
     # 最大循环
     max_iterations: int
 
-    # 上下文
+    # CRM / Agent历史上下文
     memory_context: list
+
+    # 产品知识库检索上下文
+    #
+    # 由：
+    #
+    # app.agent.knowledge_retriever
+    #
+    # 中的：
+    #
+    # knowledge_retrieval_node
+    #
+    # 写入。
+    #
+    # 典型结构：
+    #
+    # [
+    #     {
+    #         "content": "...",
+    #         "source": "..."
+    #     }
+    # ]
+    #
+    # Reviewer可以读取该字段，
+    # 将企业需求与内部产品知识进行匹配。
+    knowledge_context: list[dict]

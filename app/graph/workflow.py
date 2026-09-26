@@ -1,91 +1,96 @@
 from langgraph.graph import (
     StateGraph,
     START,
-    END
+    END,
 )
 
 from langgraph.prebuilt import ToolNode
 
 
+# ============================================================
 # 状态定义
+# ============================================================
+
 from app.agent.state import SalesAgentState
 
 
+
+# ============================================================
 # Agent节点
+# ============================================================
+
 from app.agent.planner import planning_node
-from app.agent.executor import executor_node
+
+
+from app.agent.executor import (
+    executor_node,
+    tools as executor_tools,
+)
+
+
 from app.agent.reviewer import review_node
 
-# Memory相关
-from app.agent.memory import memory_node
-from app.agent.memory_retriever import memory_retrieval_node
 
+
+# ============================================================
+# Memory相关
+# ============================================================
+
+from app.agent.memory import memory_node
+
+
+from app.agent.memory_retriever import (
+    memory_retrieval_node,
+)
+
+
+
+# ============================================================
+# Knowledge Retrieval
+# ============================================================
+
+from app.agent.knowledge_retriever import (
+    knowledge_retrieval_node,
+)
+
+
+
+# ============================================================
 # Follow-up销售动作
+# ============================================================
+
 from app.agent.followup import followup_node
 
 
 
-# ==============================
-# Tools
-# ==============================
-
-from app.tools.company_tools import (
-    search_companies,
-    search_company_news,
-    search_company_jobs
-)
 
 
-from app.tools.crm_tools import (
-    query_leads,
-    update_lead_stage
-)
-
-# Executor可调用工具
-
-tools = [
-
-    # 企业搜索
-    search_companies,
-
-
-    # 新闻动态
-    search_company_news,
-
-
-    # 招聘信息
-    search_company_jobs,
-
-
-    # CRM历史客户查询
-    query_leads,
-
-    # CRM更新
-    update_lead_stage
-
-]
-
-
-
-# ==============================
+# ============================================================
 # Executor路由判断
-# ==============================
-
+# ============================================================
 
 def should_continue(
     state: SalesAgentState
 ):
 
     """
-    判断Executor下一步：
-
-    有tool_calls:
-        Executor -> Tools
+    判断 Executor 下一步执行方向。
 
 
-    无tool_calls:
-        Executor -> Review
+    如果最后一条 AIMessage 包含 tool_calls：
 
+        Executor
+            ↓
+        Tools
+
+
+    如果没有 tool_calls：
+
+        Executor
+            ↓
+        Knowledge Retrieval
+            ↓
+        Review
     """
 
 
@@ -97,14 +102,13 @@ def should_continue(
 
     if not messages:
 
-        return "review"
+        return "knowledge"
 
 
 
     last_message = messages[-1]
 
 
-    # LLM请求调用工具
 
     if getattr(
         last_message,
@@ -116,23 +120,25 @@ def should_continue(
 
 
 
-    # 信息收集完成
-
-    return "review"
+    return "knowledge"
 
 
 
 
 
-# ==============================
+
+
+# ============================================================
 # 创建Graph
-# ==============================
-
+# ============================================================
 
 def create_graph():
 
     """
-    Sales Agent 工作流:
+    AI Sales Agent 工作流
+
+
+    当前流程：
 
     
     START
@@ -140,31 +146,28 @@ def create_graph():
       ↓
 
     Memory Retrieval
-    历史客户记忆检索
 
       ↓
 
     Planner
-    制定销售调研计划
 
       ↓
 
     Executor
-    Agent自主决策
-
-
-      ↓ tool_calls
-
-    Tools
 
       ↓
 
-    Executor循环
+    Tool循环
 
 
       ↓
 
-    Review
+
+    Knowledge Retrieval
+
+      ↓
+
+    Reviewer
 
       ↓
 
@@ -179,8 +182,24 @@ def create_graph():
     END
 
 
-    """
 
+    Knowledge Retrieval作用：
+
+    根据当前销售目标：
+
+        产品信息
+        行业信息
+
+    检索企业产品知识，
+
+    为Reviewer提供：
+
+        产品能力
+        适用场景
+        解决方案
+
+
+    """
 
 
     graph = StateGraph(
@@ -189,12 +208,14 @@ def create_graph():
 
 
 
-    # ==========================
+    # ========================================================
     # Nodes
-    # ==========================
+    # ========================================================
 
 
-    # 历史记忆检索
+    # --------------------------------------------------------
+    # 1. CRM历史记忆检索
+    # --------------------------------------------------------
 
     graph.add_node(
 
@@ -206,7 +227,9 @@ def create_graph():
 
 
 
-    # 任务规划
+    # --------------------------------------------------------
+    # 2. 任务规划
+    # --------------------------------------------------------
 
     graph.add_node(
 
@@ -218,7 +241,9 @@ def create_graph():
 
 
 
-    # Agent执行
+    # --------------------------------------------------------
+    # 3. Agent执行
+    # --------------------------------------------------------
 
     graph.add_node(
 
@@ -230,19 +255,39 @@ def create_graph():
 
 
 
-    # Tool执行
+    # --------------------------------------------------------
+    # 4. Tool执行
+    # --------------------------------------------------------
 
     graph.add_node(
 
         "tools",
 
-        ToolNode(tools)
+        ToolNode(
+            executor_tools
+        )
 
     )
 
 
 
-    # 客户评估
+    # --------------------------------------------------------
+    # 5. 产品知识检索
+    # --------------------------------------------------------
+
+    graph.add_node(
+
+        "knowledge",
+
+        knowledge_retrieval_node
+
+    )
+
+
+
+    # --------------------------------------------------------
+    # 6. 客户评估
+    # --------------------------------------------------------
 
     graph.add_node(
 
@@ -254,7 +299,9 @@ def create_graph():
 
 
 
-    # CRM记忆保存
+    # --------------------------------------------------------
+    # 7. CRM保存
+    # --------------------------------------------------------
 
     graph.add_node(
 
@@ -266,7 +313,9 @@ def create_graph():
 
 
 
-    # 销售跟进任务生成
+    # --------------------------------------------------------
+    # 8. 销售跟进
+    # --------------------------------------------------------
 
     graph.add_node(
 
@@ -279,16 +328,16 @@ def create_graph():
 
 
 
-
-    # ==========================
+    # ========================================================
     # Fixed Edges
-    # ==========================
+    # ========================================================
 
 
     # START
+    #
     # ↓
+    #
     # Memory Retrieval
-
 
     graph.add_edge(
 
@@ -301,6 +350,10 @@ def create_graph():
 
 
     # Memory Retrieval
+    #
+    # ↓
+    #
+    # Planner
 
     graph.add_edge(
 
@@ -313,6 +366,10 @@ def create_graph():
 
 
     # Planner
+    #
+    # ↓
+    #
+    # Executor
 
     graph.add_edge(
 
@@ -324,7 +381,11 @@ def create_graph():
 
 
 
-    # Tool执行完成
+    # Tool
+    #
+    # ↓
+    #
+    # Executor继续推理
 
     graph.add_edge(
 
@@ -336,7 +397,27 @@ def create_graph():
 
 
 
+    # Knowledge
+    #
+    # ↓
+    #
     # Review
+
+    graph.add_edge(
+
+        "knowledge",
+
+        "review"
+
+    )
+
+
+
+    # Review
+    #
+    # ↓
+    #
+    # Memory
 
     graph.add_edge(
 
@@ -349,6 +430,10 @@ def create_graph():
 
 
     # Memory
+    #
+    # ↓
+    #
+    # Follow-up
 
     graph.add_edge(
 
@@ -361,6 +446,10 @@ def create_graph():
 
 
     # Follow-up
+    #
+    # ↓
+    #
+    # END
 
     graph.add_edge(
 
@@ -373,10 +462,9 @@ def create_graph():
 
 
 
-
-    # ==========================
+    # ========================================================
     # Conditional Edge
-    # ==========================
+    # ========================================================
 
 
     graph.add_conditional_edges(
@@ -387,16 +475,14 @@ def create_graph():
 
         {
 
-
             "tools":
 
-            "tools",
+                "tools",
 
 
+            "knowledge":
 
-            "review":
-
-            "review"
+                "knowledge",
 
         }
 
@@ -404,5 +490,9 @@ def create_graph():
 
 
 
+
+    # ========================================================
+    # Compile
+    # ========================================================
 
     return graph.compile()
