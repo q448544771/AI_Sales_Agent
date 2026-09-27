@@ -39,7 +39,45 @@ def _make_worker_node(
     """
 
     def worker_node(state: MultiAgentState) -> dict:
+
+        print("\n========== BEFORE WORKER ==========")
+        print("Worker:", name)
+
+        print(
+            "State keys:",
+            list(state.keys())
+        )
+
+        if "research_output" in state:
+            print(
+                "Research records:",
+                len(
+                    state["research_output"]
+                    .get(
+                        "company_records",
+                        []
+                    )
+                )
+            )
+
+        print("===================================\n")
+
+
         update = worker_fn(state)
+
+
+        print("\n========== AFTER WORKER ==========")
+        print(
+            "Worker:",
+            name
+        )
+
+        print(
+            "Update keys:",
+            update.keys()
+        )
+
+        print("==================================\n")
 
         if not isinstance(update, Mapping):
             raise TypeError(

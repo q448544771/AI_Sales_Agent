@@ -1,6 +1,5 @@
 from mcp.server.mcpserver import MCPServer
 
-
 import logging
 import sys
 
@@ -51,7 +50,11 @@ def search_company(
 ):
     """
     搜索企业信息
+
+    使用真实网页搜索发现企业候选。
+    保留来源、策略版本以及验证信息。
     """
+
 
     logger.info(
         f"调用 search_company: industry={industry}, region={region}"
@@ -86,7 +89,7 @@ def get_company_news(
     company: str
 ):
     """
-    查询企业新闻
+    查询企业真实新闻
     """
 
 
@@ -122,7 +125,7 @@ def get_company_jobs(
     company: str
 ):
     """
-    查询企业招聘
+    查询企业真实招聘信息
     """
 
 

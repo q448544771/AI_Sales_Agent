@@ -462,7 +462,20 @@ def run_research(
                     raise RuntimeError(
                         f"Company MCP tool {name} failed"
                     ) from exc
+                # Phase 6 migration guard:
+                # Legacy Phase 5 Research must not silently reinterpret
+                # real search snippets as verified enterprise facts.
 
+                if (
+                    isinstance(result, Mapping)
+                    and result.get("data_mode") == "real_web_search"
+                ):
+                    raise RuntimeError(
+                        "Phase 6 real company provider is active, but the "
+                        "legacy Phase 5 Research Agent still expects mock "
+                        "text records. Complete Phase 6.3 structured "
+                        "Research migration before running the full graph."
+                    )
                 # 缓存本次请求
                 used_requests[key] = result
 
